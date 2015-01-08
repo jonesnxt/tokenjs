@@ -9,7 +9,11 @@
 <script src="jssha256.js"></script>
 <script src="token.js"></script>
 <script>
-document.write("token : " + tokenize("this", "that") + "<br/> Passphrase: 'that' <br/> Data/website: 'this'");
+var token = generateToken("this", "that");
+
+var ver = parseToken(token, "this");
+
+document.write(" token : " + token + "<br/> Passphrase: 'that' <br/> Data/website: 'this' <br/> verified: "+ver.isValid+"<br/> timestamp: "+ver.timestamp+"<br/> public key: "+ver.publicKey);
 </script>
 </head>
 <body>

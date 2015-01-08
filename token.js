@@ -68,6 +68,18 @@ function toByteArray(long) {
     return byteArray;
 };
 
+function toIntVal(byteArray) {
+    // we want to represent the input as a 8-bytes array
+    var intval = 0;
+
+    for ( var index = 0; index < byteArray.length; index ++ ) {
+    	var value = byteArray[index] * Math.pow(256, index);
+    	intval += value;
+    }
+
+    return intval;
+};
+
 function signBytes (message, secretPhrase) {
 		var messageBytes = message;
 		var secretPhraseBytes = converters.stringToByteArray(secretPhrase);
@@ -94,7 +106,37 @@ function signBytes (message, secretPhrase) {
 		return v.concat(h);
 	}
 
-function tokenize(websiteString, secretPhrase)
+	function areByteArraysEqual(bytes1, bytes2) {
+		if (bytes1.length !== bytes2.length)
+			return false;
+
+		for (var i = 0; i < bytes1.length; ++i) {
+			if (bytes1[i] !== bytes2[i])
+				return false;
+		}
+
+		return true;
+	}
+
+	function verifyBytes(signature, message, publicKey) {
+		var signatureBytes = signature;
+		var messageBytes = message;
+		var publicKeyBytes = publicKey;
+		var v = signatureBytes.slice(0, 32);
+		var h = signatureBytes.slice(32);
+		var y = curve25519.verify(v, h, publicKeyBytes);
+
+		var m = simpleHash(messageBytes);
+
+		_hash.init();
+		_hash.update(m);
+		_hash.update(y);
+		var h2 = _hash.getBytes();
+
+		return areByteArraysEqual(h, h2);
+	}
+
+function generateToken(websiteString, secretPhrase)
 {
 		//alert(converters.stringToHexString(websiteString));
 		var hexwebsite = converters.stringToHexString(websiteString);
@@ -145,3 +187,46 @@ function tokenize(websiteString, secretPhrase)
         return buf;
 
     }
+
+function parseToken(tokenString, website)
+{
+ 		var websiteBytes = converters.stringToByteArray(website);
+        var tokenBytes = [];
+        var i = 0;
+        var j = 0;
+
+        for (; i < tokenString.length; i += 8, j += 5) {
+
+        	var number = new BigInteger(tokenString.substring(i, i+8), 32);
+            var part = converters.hexStringToByteArray(number.toRadix(16));
+
+            tokenBytes[j] = part[4];
+            tokenBytes[j + 1] = part[3];
+            tokenBytes[j + 2] = part[2];
+            tokenBytes[j + 3] = part[1];
+            tokenBytes[j + 4] = part[0];
+
+        }
+
+        if (i != 160) {
+            new Error("tokenString parsed to invalid size");
+        }
+        var publicKey = [];
+        publicKey = tokenBytes.slice(0, 32);
+        var timebytes = [tokenBytes[32], tokenBytes[33], tokenBytes[34], tokenBytes[35]];
+
+        var timestamp = toIntVal(timebytes);
+        var signature = tokenBytes.slice(36, 100);
+
+        var data = websiteBytes.concat(tokenBytes.slice(0, 36));
+       	
+        var isValid = verifyBytes(signature, data, publicKey);
+
+        var ret = {};
+        ret.isValid = isValid;
+        ret.timestamp = timestamp;
+        ret.publicKey = converters.byteArrayToHexString(publicKey);
+
+        return ret;
+
+}
