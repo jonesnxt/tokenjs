@@ -7,7 +7,10 @@ Useage
 ======
 
 Include all relevant js files (all included)
-use function tokenize(websiteString, secretPhrase) to create a valid nxt token.
+functions:
+generateToken(websiteString, secretPhrase) -> returns token (string)
+parseToken(tokenString, website) -> returns (object) with isValid, publicKey, and timestamp
+
 for help please look through the ./test.html included within this repository.
 
 Lisense
